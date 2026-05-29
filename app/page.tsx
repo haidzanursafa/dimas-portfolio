@@ -3,7 +3,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 
-const figmaFamor = "https://www.figma.com/design/5UmKA9hr3oDR4t9ocKWGK0/UID?node-id=24-977&t=Pky4BfdicJCDN5Yk-1";
+const figmaFamor = "https://www.figma.com/design/5UmKA9hr3oDR4t9ocKWGK0/UID?node-id=24-977&t=y1wQh5amN1Wmj26i-1";
 const figmaAdmin = "https://www.figma.com/design/5UmKA9hr3oDR4t9ocKWGK0/UID?node-id=1071-2323&t=Gjfyew6uiYq4fzos-1";
 const figmaBuu = "https://www.figma.com/design/HdkOD2B9zviQ6bIGzC42KY/Tugas-Design-UI-Mobile?node-id=0-1&t=R0bywFoJfNpHE86c-1";
 const figmaBuuWeb = "https://www.figma.com/design/btI3KZDJw66PIIA1iLv8Wq/Tugas-Design-UI-Website?node-id=1-16&t=nm0jm6KL9FkbdIHk-1";
