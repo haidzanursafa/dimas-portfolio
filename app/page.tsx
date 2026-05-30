@@ -1,4 +1,3 @@
-
 "use client";
 import React, { useEffect, useRef, useState } from "react";
 import Image from "next/image";
@@ -11,6 +10,119 @@ const figmaSekala = "https://www.figma.com/design/SmFBc4lRwKQtlLI7Ab1XzH/SEKALA?
 const figmaUBBC = "https://www.figma.com/design/BNeTOC9PndF3V1BV1shhd3/UBBC-AND-CBS?node-id=7-16&t=1dWtvfZ4HuBX31xo-1";
 const canvaCarousel = "https://canva.link/0xefm37k087kbuc";
 
+// ─── PARTICLE BACKGROUND ───────────────────────────────────────────────────────
+function ParticleBackground() {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    let animId: number;
+    let W = window.innerWidth;
+    let H = window.innerHeight;
+
+    const resize = () => {
+      W = window.innerWidth;
+      H = window.innerHeight;
+      canvas.width = W;
+      canvas.height = H;
+    };
+    resize();
+
+    const COUNT = Math.min(Math.floor((W * H) / 14000), 90);
+
+    type Particle = {
+      x: number; y: number;
+      vx: number; vy: number;
+      r: number; opacity: number;
+      pulse: number; pulseSpeed: number;
+    };
+
+    const particles: Particle[] = Array.from({ length: COUNT }, () => ({
+      x: Math.random() * W,
+      y: Math.random() * H,
+      vx: (Math.random() - 0.5) * 0.25,
+      vy: (Math.random() - 0.5) * 0.25,
+      r: Math.random() * 1.5 + 0.3,
+      opacity: Math.random() * 0.5 + 0.2,
+      pulse: Math.random() * Math.PI * 2,
+      pulseSpeed: Math.random() * 0.02 + 0.005,
+    }));
+
+    const MAX_DIST = 160;
+
+    const draw = () => {
+      ctx.clearRect(0, 0, W, H);
+
+      for (let i = 0; i < particles.length; i++) {
+        const p = particles[i];
+        p.x += p.vx;
+        p.y += p.vy;
+        p.pulse += p.pulseSpeed;
+        if (p.x < -10) p.x = W + 10;
+        if (p.x > W + 10) p.x = -10;
+        if (p.y < -10) p.y = H + 10;
+        if (p.y > H + 10) p.y = -10;
+
+        const pulsedOpacity = p.opacity * (0.7 + 0.3 * Math.sin(p.pulse));
+
+        // Glow halo
+        const grad = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.r * 4);
+        grad.addColorStop(0, `rgba(96,165,250,${pulsedOpacity * 0.6})`);
+        grad.addColorStop(1, "rgba(96,165,250,0)");
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.r * 4, 0, Math.PI * 2);
+        ctx.fillStyle = grad;
+        ctx.fill();
+
+        // Core dot
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(147,197,253,${pulsedOpacity})`;
+        ctx.fill();
+
+        // Connections
+        for (let j = i + 1; j < particles.length; j++) {
+          const q = particles[j];
+          const dx = p.x - q.x;
+          const dy = p.y - q.y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          if (dist < MAX_DIST) {
+            const alpha = (1 - dist / MAX_DIST) * 0.1;
+            ctx.beginPath();
+            ctx.moveTo(p.x, p.y);
+            ctx.lineTo(q.x, q.y);
+            ctx.strokeStyle = `rgba(96,165,250,${alpha})`;
+            ctx.lineWidth = 0.6;
+            ctx.stroke();
+          }
+        }
+      }
+
+      animId = requestAnimationFrame(draw);
+    };
+
+    draw();
+    window.addEventListener("resize", resize);
+    return () => {
+      cancelAnimationFrame(animId);
+      window.removeEventListener("resize", resize);
+    };
+  }, []);
+
+  return (
+    <canvas
+      ref={canvasRef}
+      className="fixed inset-0 pointer-events-none"
+      style={{ zIndex: 1 }}
+    />
+  );
+}
+
+// ─── HELPERS ──────────────────────────────────────────────────────────────────
 function useInView(threshold = 0.12) {
   const ref = useRef<HTMLDivElement>(null);
   const [inView, setInView] = useState(false);
@@ -41,6 +153,7 @@ function FadeIn({ children, delay = 0, className = "", direction = "up" }: {
   );
 }
 
+// ─── DATA ─────────────────────────────────────────────────────────────────────
 type Project = {
   img: string; alt: string; tag: string; title: string; desc: string;
   features: string[]; link: string; accent: string; tool: string;
@@ -272,7 +385,7 @@ const contactLinks = [
     accentBorder: "rgba(255,255,255,0.18)",
     icon: (
       <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-        <path d="M12 0C5.374 0 0 5.373 0 12c0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23A11.509 11.509 0 0112 5.803c1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576C20.566 21.797 24 17.3 24 12c0-6.627-5.373-12-12-12z"/>
+        <path d="M12 0C5.374 0 0 5.373 0 12c0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23A11.509 11.509 0 0112 5.803c1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576C20.566 21.797 24 17.3 24 12c0-6.627-5.373-12-12-12z" />
       </svg>
     ),
   },
@@ -285,7 +398,7 @@ const contactLinks = [
     accentBorder: "rgba(59,130,246,0.22)",
     icon: (
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#60a5fa" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M3 8l9 6 9-6M3 8v10a1 1 0 001 1h16a1 1 0 001-1V8M3 8a1 1 0 011-1h16a1 1 0 011 1"/>
+        <path d="M3 8l9 6 9-6M3 8v10a1 1 0 001 1h16a1 1 0 001-1V8M3 8a1 1 0 011-1h16a1 1 0 011 1" />
       </svg>
     ),
   },
@@ -298,7 +411,7 @@ const contactLinks = [
     accentBorder: "rgba(52,211,153,0.22)",
     icon: (
       <svg width="18" height="18" viewBox="0 0 24 24" fill="#34d399">
-        <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+        <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" />
       </svg>
     ),
   },
@@ -311,14 +424,15 @@ const contactLinks = [
     accentBorder: "rgba(244,114,182,0.22)",
     icon: (
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#f472b6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <rect x="2" y="2" width="20" height="20" rx="5" ry="5"/>
-        <path d="M16 11.37A4 4 0 1112.63 8 4 4 0 0116 11.37z"/>
-        <line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/>
+        <rect x="2" y="2" width="20" height="20" rx="5" ry="5" />
+        <path d="M16 11.37A4 4 0 1112.63 8 4 4 0 0116 11.37z" />
+        <line x1="17.5" y1="6.5" x2="17.51" y2="6.5" />
       </svg>
     ),
   },
 ];
 
+// ─── MAIN PAGE ─────────────────────────────────────────────────────────────────
 export default function Home() {
   const [scrollY, setScrollY] = useState(0);
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
@@ -331,7 +445,10 @@ export default function Home() {
     const handleMouse = (e: MouseEvent) => setMousePos({ x: e.clientX, y: e.clientY });
     window.addEventListener("scroll", handleScroll, { passive: true });
     window.addEventListener("mousemove", handleMouse);
-    return () => { window.removeEventListener("scroll", handleScroll); window.removeEventListener("mousemove", handleMouse); };
+    return () => {
+      window.removeEventListener("scroll", handleScroll);
+      window.removeEventListener("mousemove", handleMouse);
+    };
   }, []);
 
   const handleCopyEmail = () => {
@@ -352,6 +469,7 @@ export default function Home() {
         ::-webkit-scrollbar-thumb { background: rgba(59,130,246,0.4); border-radius: 99px; }
         .syne { font-family: 'Outfit', sans-serif; }
 
+        /* ── CORE KEYFRAMES ── */
         @keyframes float { 0%,100%{transform:translateY(0) rotate(0deg)} 33%{transform:translateY(-14px) rotate(1.5deg)} 66%{transform:translateY(-7px) rotate(-1deg)} }
         @keyframes pulse-orb { 0%,100%{opacity:0.3;transform:scale(1)} 50%{opacity:0.6;transform:scale(1.08)} }
         @keyframes shimmer { 0%{background-position:-200% center} 100%{background-position:200% center} }
@@ -360,6 +478,65 @@ export default function Home() {
         @keyframes hero-in { 0%{opacity:0;transform:translateY(48px) skewY(3deg)} 100%{opacity:1;transform:translateY(0) skewY(0)} }
         @keyframes dot-blink { 0%,100%{opacity:1} 50%{opacity:0.2} }
         @keyframes mobile-menu-in { 0%{opacity:0;transform:translateY(-10px)} 100%{opacity:1;transform:translateY(0)} }
+
+        /* ── NEW BACKGROUND ANIMATIONS ── */
+
+        /* Drifting ambient orbs */
+        @keyframes drift-1 {
+          0%,100% { transform: translate(0px, 0px) scale(1); }
+          25%      { transform: translate(70px, -50px) scale(1.08); }
+          50%      { transform: translate(120px, 30px) scale(1.04); }
+          75%      { transform: translate(40px, 80px) scale(0.96); }
+        }
+        @keyframes drift-2 {
+          0%,100% { transform: translate(0px, 0px) scale(1); }
+          33%     { transform: translate(-90px, 70px) scale(1.06); }
+          66%     { transform: translate(60px, -40px) scale(1.1); }
+        }
+        @keyframes drift-3 {
+          0%,100% { transform: translate(0px, 0px) scale(1); }
+          50%     { transform: translate(-60px, -80px) scale(1.12); }
+        }
+        @keyframes drift-4 {
+          0%,100% { transform: translate(0px, 0px) scale(1); }
+          40%     { transform: translate(50px, 60px) scale(0.94); }
+          80%     { transform: translate(-30px, 20px) scale(1.05); }
+        }
+
+        /* Animated grid pulse */
+        @keyframes grid-pulse {
+          0%,100% { opacity: 0.022; }
+          50%      { opacity: 0.055; }
+        }
+
+        /* Horizontal scan line */
+        @keyframes scan-h {
+          0%   { transform: translateY(-2px); opacity: 0; }
+          5%   { opacity: 1; }
+          95%  { opacity: 1; }
+          100% { transform: translateY(100vh); opacity: 0; }
+        }
+
+        /* Vertical scan line */
+        @keyframes scan-v {
+          0%   { transform: translateX(-2px); opacity: 0; }
+          5%   { opacity: 1; }
+          95%  { opacity: 1; }
+          100% { transform: translateX(100vw); opacity: 0; }
+        }
+
+        /* Starfield twinkle */
+        @keyframes twinkle {
+          0%,100% { opacity: 0.15; transform: scale(1); }
+          50%     { opacity: 0.7; transform: scale(1.5); }
+        }
+
+        /* Aurora shift */
+        @keyframes aurora {
+          0%,100% { opacity: 0.04; transform: scaleX(1) skewY(0deg); }
+          33%     { opacity: 0.07; transform: scaleX(1.1) skewY(-1deg); }
+          66%     { opacity: 0.035; transform: scaleX(0.95) skewY(1deg); }
+        }
 
         .f1{animation:float 6s ease-in-out infinite}
         .f2{animation:float 8s ease-in-out infinite 1s}
@@ -471,39 +648,17 @@ export default function Home() {
           align-items: center;
           gap: 16px;
         }
-        .contact-card:hover {
-          transform: translateX(6px) translateY(-2px);
-        }
-        .contact-icon-wrap {
-          transition: all 0.3s cubic-bezier(0.16,1,0.3,1);
-        }
-        .contact-card:hover .contact-icon-wrap {
-          transform: scale(1.12);
-          filter: brightness(1.3);
-        }
+        .contact-card:hover { transform: translateX(6px) translateY(-2px); }
+        .contact-icon-wrap { transition: all 0.3s cubic-bezier(0.16,1,0.3,1); }
+        .contact-card:hover .contact-icon-wrap { transform: scale(1.12); filter: brightness(1.3); }
 
-        /* ── MOBILE MENU ── */
-        .mobile-menu {
-          animation: mobile-menu-in 0.3s cubic-bezier(0.16,1,0.3,1) both;
-        }
+        .mobile-menu { animation: mobile-menu-in 0.3s cubic-bezier(0.16,1,0.3,1) both; }
 
-        /* ── RESPONSIVE OVERRIDES ── */
-
-        /* Padding helpers */
+        /* ── RESPONSIVE ── */
         .section-px { padding-left: 48px; padding-right: 48px; }
-        @media (max-width: 768px) {
-          .section-px { padding-left: 20px; padding-right: 20px; }
-        }
-        @media (max-width: 480px) {
-          .section-px { padding-left: 16px; padding-right: 16px; }
-        }
+        @media (max-width: 768px) { .section-px { padding-left: 20px; padding-right: 20px; } }
+        @media (max-width: 480px) { .section-px { padding-left: 16px; padding-right: 16px; } }
 
-        /* ── HERO LAYOUT ── */
-        /*
-         * Desktop (>900px):   2-column grid, photo on the right
-         * Tablet (600–900px): 1-column, photo centred below text (smaller size)
-         * Mobile (<600px):    1-column, photo centred below text (compact)
-         */
         .hero-grid {
           display: grid;
           grid-template-columns: 1fr 1fr;
@@ -511,157 +666,153 @@ export default function Home() {
           gap: 80px;
         }
         @media (max-width: 900px) {
-          .hero-grid {
-            grid-template-columns: 1fr;
-            gap: 0;
-          }
+          .hero-grid { grid-template-columns: 1fr; gap: 0; }
         }
 
-        /* Photo column — always visible, centred on mobile/tablet */
-        .hero-photo-col {
-          display: flex;
-          justify-content: center;
-        }
+        .hero-photo-col { display: flex; justify-content: center; }
 
-        /* Photo wrapper sizing per breakpoint */
-        .hero-photo-wrapper {
-          position: relative;
-          width: 320px;
-          height: 420px;
-        }
-        @media (max-width: 900px) {
-          .hero-photo-wrapper {
-            width: 220px;
-            height: 290px;
-            margin-bottom: 48px;
-          }
-        }
-        @media (max-width: 480px) {
-          .hero-photo-wrapper {
-            width: 180px;
-            height: 240px;
-            margin-bottom: 40px;
-          }
-        }
+        .hero-photo-wrapper { position: relative; width: 320px; height: 420px; }
+        @media (max-width: 900px) { .hero-photo-wrapper { width: 220px; height: 290px; margin-bottom: 48px; } }
+        @media (max-width: 480px) { .hero-photo-wrapper { width: 180px; height: 240px; margin-bottom: 40px; } }
 
-        /* About grid */
-        .about-grid {
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: 48px;
-          align-items: center;
-        }
-        @media (max-width: 768px) {
-          .about-grid { grid-template-columns: 1fr; gap: 32px; }
-        }
+        .about-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 48px; align-items: center; }
+        @media (max-width: 768px) { .about-grid { grid-template-columns: 1fr; gap: 32px; } }
 
-        /* Why-me grid */
-        .why-grid {
-          display: grid;
-          grid-template-columns: repeat(5, 1fr);
-          gap: 16px;
-        }
-        @media (max-width: 1024px) {
-          .why-grid { grid-template-columns: repeat(3, 1fr); }
-        }
-        @media (max-width: 640px) {
-          .why-grid { grid-template-columns: repeat(2, 1fr); }
-        }
+        .why-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 16px; }
+        @media (max-width: 1024px) { .why-grid { grid-template-columns: repeat(3, 1fr); } }
+        @media (max-width: 640px) { .why-grid { grid-template-columns: repeat(2, 1fr); } }
 
-        /* Skills grid */
-        .skills-grid {
-          display: grid;
-          grid-template-columns: repeat(3, 1fr);
-          gap: 16px;
-        }
-        @media (max-width: 900px) {
-          .skills-grid { grid-template-columns: repeat(2, 1fr); }
-        }
-        @media (max-width: 580px) {
-          .skills-grid { grid-template-columns: 1fr; }
-        }
+        .skills-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+        @media (max-width: 900px) { .skills-grid { grid-template-columns: repeat(2, 1fr); } }
+        @media (max-width: 580px) { .skills-grid { grid-template-columns: 1fr; } }
 
-        /* Project card: stack on mobile */
-        .project-inner {
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-        }
-        @media (max-width: 768px) {
-          .project-inner { grid-template-columns: 1fr; }
-        }
+        .project-inner { display: grid; grid-template-columns: 1fr 1fr; }
+        @media (max-width: 768px) { .project-inner { grid-template-columns: 1fr; } }
 
-        /* Contact grid */
-        .contact-grid {
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: 48px;
-          align-items: center;
-        }
-        @media (max-width: 768px) {
-          .contact-grid { grid-template-columns: 1fr; gap: 32px; }
-        }
+        .contact-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 48px; align-items: center; }
+        @media (max-width: 768px) { .contact-grid { grid-template-columns: 1fr; gap: 32px; } }
 
-        /* About stats grid */
-        .about-stats {
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: 12px;
-        }
+        .about-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 
-        /* Footer flex */
-        .footer-inner {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          flex-wrap: wrap;
-          gap: 16px;
-        }
-        @media (max-width: 640px) {
-          .footer-inner { flex-direction: column; align-items: flex-start; }
-          .footer-links { flex-wrap: wrap; gap: 12px; }
-        }
+        .footer-inner { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; }
+        @media (max-width: 640px) { .footer-inner { flex-direction: column; align-items: flex-start; } .footer-links { flex-wrap: wrap; gap: 12px; } }
 
-        /* Hamburger button */
         .hamburger { display: none; }
-        @media (max-width: 900px) {
-          .hamburger { display: flex; }
-          .desktop-nav { display: none; }
-          .desktop-cv-btn { display: none; }
-        }
+        @media (max-width: 900px) { .hamburger { display: flex; } .desktop-nav { display: none; } .desktop-cv-btn { display: none; } }
 
-        /* Hero text padding: give breathing room on mobile when stacked */
         .hero-text-col { padding-top: 0; padding-bottom: 0; }
-        @media (max-width: 900px) {
-          .hero-text-col { padding-top: 100px; padding-bottom: 32px; }
-        }
+        @media (max-width: 900px) { .hero-text-col { padding-top: 100px; padding-bottom: 32px; } }
 
-        /* Floating icons: only on desktop to avoid overflow on small screens */
         .floating-icons { display: block; }
-        @media (max-width: 900px) {
-          .floating-icons { display: none; }
-        }
+        @media (max-width: 900px) { .floating-icons { display: none; } }
 
-        /* On mobile the photo is the second item in the grid;
-           reorder so text comes first */
         @media (max-width: 900px) {
           .hero-text-col  { order: 1; }
           .hero-photo-col { order: 2; padding-bottom: 48px; }
         }
+
+        /* Starfield dots */
+        .star {
+          position: fixed;
+          border-radius: 50%;
+          background: #93c5fd;
+          pointer-events: none;
+          z-index: 0;
+        }
       `}</style>
 
-      {/* CURSOR GLOW (desktop only) */}
-      <div className="fixed pointer-events-none z-10 hidden md:block" style={{ left: mousePos.x - 250, top: mousePos.y - 250, width: 500, height: 500, background: "radial-gradient(circle, rgba(59,130,246,0.05) 0%, transparent 65%)", transition: "left 0.12s ease, top 0.12s ease" }} />
+      {/* ═══════════════════════════════════════════════════════════
+          BACKGROUND LAYER STACK (z-index 0)
+      ═══════════════════════════════════════════════════════════ */}
 
-      {/* NOISE */}
+      {/* 1. Animated grid */}
+      <div
+        className="fixed inset-0 pointer-events-none"
+        style={{
+          backgroundImage:
+            "linear-gradient(rgba(59,130,246,0.045) 1px, transparent 1px), linear-gradient(90deg, rgba(59,130,246,0.045) 1px, transparent 1px)",
+          backgroundSize: "80px 80px",
+          animation: "grid-pulse 7s ease-in-out infinite",
+          zIndex: 0,
+        }}
+      />
+
+      {/* 2. Horizontal scan line */}
+      <div
+        className="fixed left-0 right-0 pointer-events-none"
+        style={{
+          top: 0,
+          height: "1px",
+          background: "linear-gradient(90deg, transparent 0%, rgba(96,165,250,0.18) 30%, rgba(167,139,250,0.22) 50%, rgba(96,165,250,0.18) 70%, transparent 100%)",
+          animation: "scan-h 12s linear infinite",
+          zIndex: 0,
+        }}
+      />
+
+      {/* 3. Vertical scan line */}
+      <div
+        className="fixed top-0 bottom-0 pointer-events-none"
+        style={{
+          left: 0,
+          width: "1px",
+          background: "linear-gradient(180deg, transparent 0%, rgba(96,165,250,0.1) 30%, rgba(167,139,250,0.14) 50%, rgba(96,165,250,0.1) 70%, transparent 100%)",
+          animation: "scan-v 20s linear infinite 6s",
+          zIndex: 0,
+        }}
+      />
+
+      {/* 4. Drifting ambient orbs */}
+      <div className="fixed pointer-events-none" style={{ top: "5%", left: "10%", width: 700, height: 700, background: "radial-gradient(circle, rgba(59,130,246,0.055) 0%, transparent 60%)", animation: "drift-1 28s ease-in-out infinite", zIndex: 0, filter: "blur(1px)" }} />
+      <div className="fixed pointer-events-none" style={{ top: "40%", right: "5%", width: 600, height: 600, background: "radial-gradient(circle, rgba(139,92,246,0.045) 0%, transparent 60%)", animation: "drift-2 34s ease-in-out infinite 8s", zIndex: 0, filter: "blur(1px)" }} />
+      <div className="fixed pointer-events-none" style={{ bottom: "10%", left: "35%", width: 500, height: 500, background: "radial-gradient(circle, rgba(99,102,241,0.04) 0%, transparent 60%)", animation: "drift-3 22s ease-in-out infinite 4s", zIndex: 0, filter: "blur(1px)" }} />
+      <div className="fixed pointer-events-none" style={{ top: "60%", left: "5%", width: 400, height: 400, background: "radial-gradient(circle, rgba(14,165,233,0.035) 0%, transparent 60%)", animation: "drift-4 26s ease-in-out infinite 12s", zIndex: 0, filter: "blur(1px)" }} />
+
+      {/* 5. Aurora band — subtle wide glow across the top */}
+      <div
+        className="fixed pointer-events-none"
+        style={{
+          top: 0,
+          left: "-10%",
+          width: "120%",
+          height: "320px",
+          background: "linear-gradient(180deg, rgba(59,130,246,0.06) 0%, rgba(139,92,246,0.04) 40%, transparent 100%)",
+          animation: "aurora 16s ease-in-out infinite",
+          zIndex: 0,
+          filter: "blur(40px)",
+        }}
+      />
+
+      {/* 6. Particle network canvas */}
+      <ParticleBackground />
+
+      {/* 7. Noise overlay */}
       <div className="fixed inset-0 noise z-0" />
 
-      {/* BG ORBS */}
-      <div className="fixed top-0 right-0 w-[600px] h-[600px] rounded-full pointer-events-none" style={{ background: "radial-gradient(circle, rgba(59,130,246,0.06) 0%, transparent 60%)", animation: "pulse-orb 8s ease-in-out infinite", zIndex: 0 }} />
-      <div className="fixed bottom-0 left-0 w-[500px] h-[500px] rounded-full pointer-events-none" style={{ background: "radial-gradient(circle, rgba(139,92,246,0.05) 0%, transparent 60%)", animation: "pulse-orb 10s ease-in-out infinite 3s", zIndex: 0 }} />
+      {/* 8. Cursor glow (desktop) */}
+      <div
+        className="fixed pointer-events-none z-10 hidden md:block"
+        style={{
+          left: mousePos.x - 250,
+          top: mousePos.y - 250,
+          width: 500,
+          height: 500,
+          background: "radial-gradient(circle, rgba(59,130,246,0.055) 0%, transparent 65%)",
+          transition: "left 0.12s ease, top 0.12s ease",
+        }}
+      />
 
-      {/* ── NAVBAR ── */}
-      <nav className="flex items-center justify-between px-5 md:px-12 py-4 md:py-5 sticky top-0 z-50" style={{ background: scrollY > 50 ? "rgba(3,8,15,0.95)" : "transparent", backdropFilter: scrollY > 50 ? "blur(24px)" : "none", borderBottom: scrollY > 50 ? "1px solid rgba(255,255,255,0.05)" : "1px solid transparent", transition: "all 0.5s ease" }}>
-        {/* Logo */}
+      {/* ═══════════════════════════════════════════════════════════
+          NAVBAR
+      ═══════════════════════════════════════════════════════════ */}
+      <nav
+        className="flex items-center justify-between px-5 md:px-12 py-4 md:py-5 sticky top-0 z-50"
+        style={{
+          background: scrollY > 50 ? "rgba(3,8,15,0.92)" : "transparent",
+          backdropFilter: scrollY > 50 ? "blur(24px)" : "none",
+          borderBottom: scrollY > 50 ? "1px solid rgba(255,255,255,0.05)" : "1px solid transparent",
+          transition: "all 0.5s ease",
+        }}
+      >
         <div className="flex items-center gap-2">
           <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: "linear-gradient(135deg, #2563eb, #7c3aed)" }}>
             <span className="text-xs font-black text-white">D</span>
@@ -669,20 +820,19 @@ export default function Home() {
           <span className="syne text-sm font-bold tracking-wide">DHS<span className="text-blue-400">.</span></span>
         </div>
 
-        {/* Desktop Nav */}
         <div className="desktop-nav flex gap-8 text-xs font-medium">
           {navItems.map((item) => (
-            <a key={item} href={item === "Home" ? "#" : `#${item.toLowerCase()}`} className="nav-link text-white/40 hover:text-white transition-colors duration-300">{item}</a>
+            <a key={item} href={item === "Home" ? "#" : `#${item.toLowerCase()}`} className="nav-link text-white/40 hover:text-white transition-colors duration-300">
+              {item}
+            </a>
           ))}
         </div>
 
-        {/* Desktop CV button */}
         <a href="/CV_Dimas_Haidzanur.pdf" download className="desktop-cv-btn btn-blue text-white px-5 py-2 rounded-xl text-xs font-semibold flex items-center gap-2">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M12 15V3M12 15l-4-4M12 15l4-4M3 17v2a2 2 0 002 2h14a2 2 0 002-2v-2" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M12 15V3M12 15l-4-4M12 15l4-4M3 17v2a2 2 0 002 2h14a2 2 0 002-2v-2" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
           Download CV
         </a>
 
-        {/* Hamburger */}
         <button
           className="hamburger items-center justify-center w-9 h-9 rounded-xl"
           style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)" }}
@@ -690,17 +840,19 @@ export default function Home() {
           aria-label="Toggle menu"
         >
           {mobileMenuOpen ? (
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
           ) : (
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="4" y1="8" x2="20" y2="8"/><line x1="4" y1="16" x2="20" y2="16"/></svg>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="4" y1="8" x2="20" y2="8" /><line x1="4" y1="16" x2="20" y2="16" /></svg>
           )}
         </button>
       </nav>
 
-      {/* Mobile Menu Dropdown */}
+      {/* Mobile Menu */}
       {mobileMenuOpen && (
-        <div className="mobile-menu fixed top-[61px] left-0 right-0 z-40 mx-4 rounded-2xl overflow-hidden"
-          style={{ background: "rgba(8,15,28,0.97)", border: "1px solid rgba(255,255,255,0.08)", backdropFilter: "blur(24px)" }}>
+        <div
+          className="mobile-menu fixed top-[61px] left-0 right-0 z-40 mx-4 rounded-2xl overflow-hidden"
+          style={{ background: "rgba(8,15,28,0.97)", border: "1px solid rgba(255,255,255,0.08)", backdropFilter: "blur(24px)" }}
+        >
           <div className="flex flex-col py-3">
             {navItems.map((item) => (
               <a
@@ -714,7 +866,7 @@ export default function Home() {
             ))}
             <div className="mx-4 mt-2 mb-3">
               <a href="/CV_Dimas_Haidzanur.pdf" download className="btn-blue text-white w-full py-3 rounded-xl text-sm font-semibold flex items-center justify-center gap-2">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M12 15V3M12 15l-4-4M12 15l4-4M3 17v2a2 2 0 002 2h14a2 2 0 002-2v-2" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M12 15V3M12 15l-4-4M12 15l4-4M3 17v2a2 2 0 002 2h14a2 2 0 002-2v-2" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
                 Download CV
               </a>
             </div>
@@ -722,15 +874,17 @@ export default function Home() {
         </div>
       )}
 
-      {/* ── HERO ── */}
+      {/* ═══════════════════════════════════════════════════════════
+          HERO
+      ═══════════════════════════════════════════════════════════ */}
       <section className="relative section-px max-w-7xl mx-auto min-h-[95vh]">
         <div className="hero-grid" style={{ minHeight: "95vh" }}>
-          {/* Background grid */}
-          <div className="absolute inset-0 pointer-events-none" style={{ backgroundImage: "linear-gradient(rgba(59,130,246,0.025) 1px, transparent 1px), linear-gradient(90deg, rgba(59,130,246,0.025) 1px, transparent 1px)", backgroundSize: "80px 80px" }} />
-
           {/* Text Column */}
           <div className="hero-text-col space-y-6 relative z-10 py-20 md:py-24">
-            <div className="hl1 inline-flex items-center gap-2.5 px-3 py-1.5 rounded-full" style={{ background: "rgba(59,130,246,0.08)", border: "1px solid rgba(59,130,246,0.2)" }}>
+            <div
+              className="hl1 inline-flex items-center gap-2.5 px-3 py-1.5 rounded-full"
+              style={{ background: "rgba(59,130,246,0.08)", border: "1px solid rgba(59,130,246,0.2)" }}
+            >
               <span className="w-1.5 h-1.5 rounded-full bg-green-400 dot-live" />
               <span className="text-green-400 text-[10px] font-semibold uppercase tracking-[0.2em]">Available for Internship</span>
             </div>
@@ -767,10 +921,10 @@ export default function Home() {
             </div>
           </div>
 
-          {/* Photo Column — responsive on ALL screen sizes */}
+          {/* Photo Column */}
           <div className="hero-photo-col relative z-10 py-10 md:py-24">
             <div className="hero-photo-wrapper">
-              {/* Spinning rings — hidden on mobile to keep it clean */}
+              {/* Spinning rings */}
               <div className="absolute inset-[-30px] rounded-full border border-white/[0.04] hidden md:block" style={{ animation: "spin-slow 25s linear infinite" }}>
                 <div className="absolute top-0 left-1/2 w-2 h-2 rounded-full" style={{ background: "#3b82f6", transform: "translateX(-50%)", boxShadow: "0 0 8px #3b82f6" }} />
               </div>
@@ -812,7 +966,9 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ── ABOUT ── */}
+      {/* ═══════════════════════════════════════════════════════════
+          ABOUT
+      ═══════════════════════════════════════════════════════════ */}
       <section id="about" className="section-px pb-24 max-w-7xl mx-auto">
         <FadeIn>
           <div className="about-grid rounded-3xl p-6 md:p-10 glass relative overflow-hidden">
@@ -831,7 +987,12 @@ export default function Home() {
               </p>
             </div>
             <div className="about-stats">
-              {[{ val: "7+", label: "Project Selesai" }, { val: "UI/UX", label: "Design Focus" }, { val: "Frontend", label: "Development" }, { val: "2025", label: "Internship Ready" }].map(({ val, label }, i) => (
+              {[
+                { val: "7+", label: "Project Selesai" },
+                { val: "UI/UX", label: "Design Focus" },
+                { val: "Frontend", label: "Development" },
+                { val: "2025", label: "Internship Ready" },
+              ].map(({ val, label }, i) => (
                 <FadeIn key={label} delay={i * 0.1}>
                   <div className="glass-hover glass rounded-2xl p-5 cursor-default">
                     <h3 className="syne text-xl font-black text-blue-400">{val}</h3>
@@ -844,7 +1005,9 @@ export default function Home() {
         </FadeIn>
       </section>
 
-      {/* ── WHY ME ── */}
+      {/* ═══════════════════════════════════════════════════════════
+          WHY ME
+      ═══════════════════════════════════════════════════════════ */}
       <section id="whyme" className="section-px pb-24 max-w-7xl mx-auto">
         <FadeIn>
           <div className="mb-10">
@@ -865,7 +1028,9 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ── EDUCATION ── */}
+      {/* ═══════════════════════════════════════════════════════════
+          EDUCATION
+      ═══════════════════════════════════════════════════════════ */}
       <section id="education" className="section-px pb-24 max-w-7xl mx-auto">
         <FadeIn>
           <div className="mb-10">
@@ -905,7 +1070,9 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ── EXPERIENCE ── */}
+      {/* ═══════════════════════════════════════════════════════════
+          EXPERIENCE
+      ═══════════════════════════════════════════════════════════ */}
       <section id="experience" className="section-px pb-24 max-w-7xl mx-auto">
         <FadeIn>
           <div className="mb-10">
@@ -948,7 +1115,9 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ── SKILLS ── */}
+      {/* ═══════════════════════════════════════════════════════════
+          SKILLS
+      ═══════════════════════════════════════════════════════════ */}
       <section id="skills" className="section-px pb-24 max-w-7xl mx-auto">
         <FadeIn>
           <div className="mb-10">
@@ -959,7 +1128,10 @@ export default function Home() {
         <div className="skills-grid">
           {skillCategories.map((cat, ci) => (
             <FadeIn key={cat.label} delay={ci * 0.07}>
-              <div className="skill-category rounded-2xl p-5 md:p-6 h-full" style={{ background: "rgba(255,255,255,0.02)", border: `1px solid ${cat.border}`, boxShadow: `0 0 40px ${cat.bg}` }}>
+              <div
+                className="skill-category rounded-2xl p-5 md:p-6 h-full"
+                style={{ background: "rgba(255,255,255,0.02)", border: `1px solid ${cat.border}`, boxShadow: `0 0 40px ${cat.bg}` }}
+              >
                 <div className="flex items-center gap-3 mb-4">
                   <div className="w-9 h-9 rounded-xl flex items-center justify-center text-base font-black flex-shrink-0" style={{ background: cat.bg, border: `1px solid ${cat.border}`, color: cat.color }}>
                     {cat.icon}
@@ -987,7 +1159,9 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ── PROJECTS ── */}
+      {/* ═══════════════════════════════════════════════════════════
+          PROJECTS
+      ═══════════════════════════════════════════════════════════ */}
       <section id="projects" className="section-px pb-24 max-w-7xl mx-auto">
         <FadeIn>
           <div className="mb-10">
@@ -1000,12 +1174,16 @@ export default function Home() {
             <FadeIn key={p.title} delay={i * 0.06}>
               <div
                 className="project-wrap rounded-3xl overflow-hidden cursor-pointer"
-                style={{ background: "rgba(255,255,255,0.02)", border: `1px solid ${activeProject === i ? p.accent + "40" : "rgba(255,255,255,0.06)"}`, boxShadow: activeProject === i ? `0 32px 64px ${p.accent}12` : "none", transition: "all 0.4s cubic-bezier(0.16,1,0.3,1)" }}
+                style={{
+                  background: "rgba(255,255,255,0.02)",
+                  border: `1px solid ${activeProject === i ? p.accent + "40" : "rgba(255,255,255,0.06)"}`,
+                  boxShadow: activeProject === i ? `0 32px 64px ${p.accent}12` : "none",
+                  transition: "all 0.4s cubic-bezier(0.16,1,0.3,1)",
+                }}
                 onMouseEnter={() => setActiveProject(i)}
                 onMouseLeave={() => setActiveProject(null)}
               >
                 <div className="project-inner">
-                  {/* Image */}
                   <div className="relative overflow-hidden" style={{ minHeight: 240 }}>
                     <Image src={p.img} alt={p.alt} fill className="object-cover project-img" />
                     <div className="absolute inset-0" style={{ background: "linear-gradient(135deg, rgba(3,8,15,0.3) 0%, transparent 50%)" }} />
@@ -1013,12 +1191,13 @@ export default function Home() {
                       <span className="text-xs font-semibold px-3 py-1.5 rounded-full" style={{ background: `${p.accent}20`, border: `1px solid ${p.accent}40`, color: p.accent }}>{p.tag}</span>
                     </div>
                   </div>
-                  {/* Content */}
                   <div className="flex flex-col justify-center p-6 md:p-10 space-y-3 md:space-y-4">
                     <h3 className="syne text-base md:text-xl font-black leading-snug">{p.title}</h3>
                     <p className="text-white/35 text-xs md:text-sm leading-relaxed" style={{ fontWeight: 300 }}>{p.desc}</p>
                     <div className="flex flex-wrap gap-1.5">
-                      {p.features.map((f) => (<span key={f} className="text-xs px-2.5 py-1 rounded-lg text-white/40" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}>{f}</span>))}
+                      {p.features.map((f) => (
+                        <span key={f} className="text-xs px-2.5 py-1 rounded-lg text-white/40" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}>{f}</span>
+                      ))}
                     </div>
                     <div className="flex items-center gap-2 pt-1">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -1029,11 +1208,15 @@ export default function Home() {
                       )}
                       <span className="text-xs text-white/25">{p.tool}</span>
                     </div>
-                    <a href={p.link} target="_blank" rel="noopener noreferrer"
+                    <a
+                      href={p.link}
+                      target="_blank"
+                      rel="noopener noreferrer"
                       className="inline-flex items-center gap-2 text-white text-xs font-semibold px-5 py-2.5 rounded-xl w-fit"
                       style={{ background: p.accent, boxShadow: `0 4px 16px ${p.accent}40`, transition: "all 0.3s ease" }}
                       onMouseEnter={e => (e.currentTarget.style.transform = "translateY(-2px)")}
-                      onMouseLeave={e => (e.currentTarget.style.transform = "translateY(0)")}>
+                      onMouseLeave={e => (e.currentTarget.style.transform = "translateY(0)")}
+                    >
                       {p.linkLabel ?? "Lihat di Figma"}
                       <svg width="12" height="12" viewBox="0 0 14 14" fill="none"><path d="M2 7h10M8 3l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
                     </a>
@@ -1045,7 +1228,9 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ── CONTACT ── */}
+      {/* ═══════════════════════════════════════════════════════════
+          CONTACT
+      ═══════════════════════════════════════════════════════════ */}
       <section id="contact" className="section-px pb-24 max-w-7xl mx-auto">
         <FadeIn>
           <div className="mb-10">
@@ -1082,9 +1267,9 @@ export default function Home() {
                   }}
                 >
                   {copied ? (
-                    <><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Email tersalin!</>
+                    <><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>Email tersalin!</>
                   ) : (
-                    <><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>Salin email saya</>
+                    <><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" /><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" /></svg>Salin email saya</>
                   )}
                 </button>
 
@@ -1099,7 +1284,7 @@ export default function Home() {
                     transition: "all 0.3s ease",
                   }}
                 >
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M12 15V3M12 15l-4-4M12 15l4-4M3 17v2a2 2 0 002 2h14a2 2 0 002-2v-2" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M12 15V3M12 15l-4-4M12 15l4-4M3 17v2a2 2 0 002 2h14a2 2 0 002-2v-2" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
                   Download CV saya
                 </a>
               </div>
@@ -1140,7 +1325,9 @@ export default function Home() {
         </FadeIn>
       </section>
 
-      {/* ── FOOTER ── */}
+      {/* ═══════════════════════════════════════════════════════════
+          FOOTER
+      ═══════════════════════════════════════════════════════════ */}
       <footer className="section-px pb-10 max-w-7xl mx-auto">
         <div className="footer-inner pt-8" style={{ borderTop: "1px solid rgba(255,255,255,0.04)" }}>
           <div className="flex items-center gap-2">
