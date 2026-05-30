@@ -991,7 +991,7 @@ export default function Home() {
                 { val: "7+", label: "Project Selesai" },
                 { val: "UI/UX", label: "Design Focus" },
                 { val: "Frontend", label: "Development" },
-                { val: "2025", label: "Internship Ready" },
+                { val: "2026", label: "Internship Ready" },
               ].map(({ val, label }, i) => (
                 <FadeIn key={label} delay={i * 0.1}>
                   <div className="glass-hover glass rounded-2xl p-5 cursor-default">
